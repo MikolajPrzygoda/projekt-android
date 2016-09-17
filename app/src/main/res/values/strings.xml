@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Projekt Koncowy - Przygoda</string>
+    <string name="picture">Picture</string>
+    <string name="albums">Albums</string>
+    <string name="collage">Collage</string>
+    <string name="internet">Internet</string>
+    <string name="albumsTitle">Albums</string>
+</resources>
