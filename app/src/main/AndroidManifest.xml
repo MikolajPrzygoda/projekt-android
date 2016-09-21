@@ -19,9 +19,9 @@
         </activity>
         <activity
             android:name=".AlbumsActivity"
-            android:parentActivityName=".MainActivity">
-
-        </activity>
+            android:parentActivityName=".MainActivity" />
+        <activity android:name=".PicturesActivity" />
+        <activity android:name=".AlbumContentActivity"></activity>
     </application>
 
 </manifest>

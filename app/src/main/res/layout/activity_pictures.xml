@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="przygoda.com.projektkoncowy_przygoda.PicturesActivity"
+    android:orientation="vertical">
+
+
+    <GridView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:numColumns="1"
+        android:id="@+id/gvPictures" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/tvPicturesSelectedFolder"
+        android:layout_weight="6"
+        android:gravity="center"
+        android:textSize="20sp"
+        android:text="@string/placeholder"/>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_weight="6"
+        android:layout_gravity="bottom">
+
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:scaleType="center"
+            android:src="@drawable/ic_check_box_outline_blank_black_24dp"
+            android:id="@+id/ivDelete" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:scaleType="center"
+            android:src="@drawable/ic_check_black_24dp"
+            android:id="@+id/ivAccept" />
+    </LinearLayout>
+
+</LinearLayout>
