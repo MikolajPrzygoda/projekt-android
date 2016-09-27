@@ -6,4 +6,6 @@
     <string name="internet">Internet</string>
     <string name="albumsTitle">Albums</string>
     <string name="placeholder">placeholder</string>
+    <string name="picturesDialogTitle">Delete Folder</string>
+    <string name="picturesDialogMessage">Are you sure you want to delete selected folder?</string>
 </resources>

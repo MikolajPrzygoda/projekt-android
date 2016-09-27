@@ -22,7 +22,6 @@ public class AlbumsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_albums);
 
-        getSupportActionBar().hide();
         final File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         File rootDir = new File(picturesDir, "MikolajPrzygoda");
         loadDirectory(rootDir);

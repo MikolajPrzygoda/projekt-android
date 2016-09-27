@@ -1,5 +1,6 @@
 package przygoda.com.projektkoncowy_przygoda;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
@@ -7,6 +8,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -18,43 +20,54 @@ import java.io.FileFilter;
 
 public class PicturesActivity extends AppCompatActivity {
 
+    private File file;
+    public File[] files;
+    private FileFilter isDirFilter;
+    private MyArrayAdapter adapter;
+    private GridView grid;
+    private String[] fileNames;
+    private boolean saveLocation;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_pictures);
-        getSupportActionBar().hide();
 
-        FileFilter isDirFilter = new FileFilter() {
+        isDirFilter = new FileFilter() {
             @Override
             public boolean accept(File file) {
                 return file.isDirectory();
             }
         };
 
-        File file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+        file = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
         file = new File(file, "MikolajPrzygoda");
-        final File[] files = file.listFiles(isDirFilter);
+        files = file.listFiles(isDirFilter);
 
-        String[] fileNames = new String[files.length];
+        EditText editText = (EditText) findViewById(R.id.etPicturesSelectedFolder);
+        editText.setText(files[0].getName());
+
+        fileNames = new String[files.length];
         int i = 0;
         for (File f : files) {
             fileNames[i] = f.getName();
             i++;
         }
 
-        ArrayAdapter<String> adapter = new MyArrayAdapter(
+        adapter = new MyArrayAdapter(
                 PicturesActivity.this,              // Context
                 R.layout.pictures_cell_layout,      // nazwa pliku xml naszej komórki
                 fileNames);                         // tablica przechowująca dane
 
-        GridView grid = (GridView) findViewById(R.id.gvPictures);
+        grid = (GridView) findViewById(R.id.gvPictures);
         grid.setAdapter(adapter);
 
         grid.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                TextView tv1 = (TextView) findViewById(R.id.tvPicturesSelectedFolder);
-                tv1.setText(files[i].getName());
+                EditText tv1 = (EditText) findViewById(R.id.etPicturesSelectedFolder);
+                tv1.setText("");
+                tv1.append(files[i].getName());
             }
         });
 
@@ -62,9 +75,42 @@ public class PicturesActivity extends AppCompatActivity {
         ivAccept.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
+                Intent intent = new Intent(PicturesActivity.this, CameraActivity.class);
+                intent.putExtra("saveLocation",saveLocation);
+                startActivity(intent);
             }
         });
 
+        final ImageView ivSave = (ImageView) findViewById(R.id.ivSave);
+        ivSave.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(saveLocation){
+                    saveLocation = false;
+                    ivSave.setImageResource(R.drawable.ic_check_box_black_24dp);
+                }
+                else{
+                    saveLocation = true;
+                    ivSave.setImageResource(R.drawable.ic_check_box_outline_blank_black_24dp);
+                }
+            }
+        });
+
+    }
+
+    public void refreshGridView(){
+        adapter = new MyArrayAdapter(
+                PicturesActivity.this,
+                R.layout.pictures_cell_layout,
+                fileNames);
+        grid.setAdapter(adapter);
+    }
+
+    public void refreshFiles(){
+        files = file.listFiles(isDirFilter);
+        fileNames = new String[files.length];
+        for (int i = 0; i < files.length; i++) {
+            fileNames[i] = files[i].getName();
+        }
     }
 }
