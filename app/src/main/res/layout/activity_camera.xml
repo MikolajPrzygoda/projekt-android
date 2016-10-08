@@ -4,17 +4,83 @@
     android:id="@+id/activity_camera"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingBottom="@dimen/activity_vertical_margin"
-    android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="przygoda.com.projektkoncowy_przygoda.CameraActivity">
 
-    <TextView
-        android:text="@string/placeholder"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/tvCamera"
-        android:layout_centerVertical="true"
-        android:layout_centerHorizontal="true" />
+    <FrameLayout
+        android:id="@+id/cameraFrame"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        />
+
+    <LinearLayout
+        android:id="@+id/llCameraBottomPanel"
+        android:layout_width="match_parent"
+        android:padding="5dp"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:background="#992222ff"
+        android:layout_alignParentStart="false"
+        android:layout_alignParentEnd="false"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="-5dp">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/ivSelectSavePath"
+            android:layout_weight="1"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_menu_black_24dp"/>
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/ivTakePicture"
+            android:layout_weight="1"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_camera_alt_black_24dp1"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/llCameraTopPanel"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:background="#992222ff"
+        android:layout_height="60dp"
+        android:padding="5dp"
+        android:layout_alignParentBottom="false"
+        android:layout_alignParentTop="true">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/ivWhiteBalance"
+            android:src="@drawable/ic_brightness_7_black_24dp"
+            android:layout_weight="1"
+            />
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/ivResolution"
+            android:src="@drawable/ic_resolution_24dp"
+            android:layout_weight="1"
+            />
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/ivFilter"
+            android:src="@drawable/ic_filter_24dp"
+            android:layout_weight="1"
+            />
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/ivExposure"
+            android:src="@drawable/ic_exposure_black_24dp"
+            android:layout_weight="1"
+            />
+
+    </LinearLayout>
+
 </RelativeLayout>

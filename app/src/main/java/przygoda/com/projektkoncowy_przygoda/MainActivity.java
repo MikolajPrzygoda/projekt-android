@@ -4,10 +4,12 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
 
 import java.io.File;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -15,6 +17,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
 
 
         //Prepare folders
@@ -49,7 +52,11 @@ public class MainActivity extends AppCompatActivity {
         picturesLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent i = new Intent(MainActivity.this, PicturesActivity.class);
+                Intent i;
+                if(!Objects.equals(Preferences.getSaveLocation(), ""))
+                    i = new Intent(MainActivity.this, CameraActivity.class);
+                else
+                    i = new Intent(MainActivity.this, PicturesActivity.class);
                 startActivity(i);
             }
         });

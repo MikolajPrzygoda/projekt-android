@@ -43,8 +43,12 @@ public class AlbumContentActivity extends AppCompatActivity implements View.OnCl
         };
 
         File[] files = album.listFiles(isFileFilter);
-        double picturesCount = files.length;
-        int rowsCount = (int) Math.ceil(picturesCount / 2);
+        double picturesCountDouble = files.length;
+        String picturesCountString = ""+picturesCountDouble;
+        String substring = picturesCountString.substring(0, picturesCountString.length()-2 );
+        int picturesCount = Integer.parseInt(substring);
+
+        int rowsCount = (int) Math.ceil(picturesCountDouble / 2);
 
         int rowWidth = point.x;
         int rowHeight = (rowWidth/5)*2;
@@ -61,7 +65,7 @@ public class AlbumContentActivity extends AppCompatActivity implements View.OnCl
             rowLayout.setLayoutParams(layoutParams);
             rows[i] = rowLayout;
 
-            if( i%2 == 0 && currentPicture < picturesCount-2 ){         //at least 2 pictures left for adding
+            if( i%2 == 0 && currentPicture < picturesCount-1 ){         //at least 2 pictures left for adding
                 ImageView picture1 = new ImageView(AlbumContentActivity.this);
                 picture1.setLayoutParams(smallViewParams);
                 String imagePath1 = files[currentPicture].getPath();
@@ -85,7 +89,8 @@ public class AlbumContentActivity extends AppCompatActivity implements View.OnCl
                 rows[i].addView(picture1);
                 rows[i].addView(picture2);
             }
-            else if( currentPicture < picturesCount-2 ){                //at least 2 pictures left for adding
+
+            else if( currentPicture < picturesCount - 1 ){                //at least 2 pictures left for adding
                 ImageView picture1 = new ImageView(AlbumContentActivity.this);
                 picture1.setLayoutParams(largeViewParams);
                 String imagePath1 = files[currentPicture].getPath();
@@ -123,6 +128,7 @@ public class AlbumContentActivity extends AppCompatActivity implements View.OnCl
                 rows[i].addView(picture);
             }
 
+
             albumContainer.addView(rows[i]);
         }
     }
@@ -130,7 +136,7 @@ public class AlbumContentActivity extends AppCompatActivity implements View.OnCl
     public Bitmap betterImageDecode(String filePath) {
         Bitmap myBitmap;
         BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = 16;                                      // zmniejszenie jakości bitmapy 4x
+        options.inSampleSize = 4;                                      // zmniejszenie jakości bitmapy 4x
         myBitmap = BitmapFactory.decodeFile(filePath, options);
         return myBitmap;
     }

@@ -8,4 +8,5 @@
     <string name="placeholder">placeholder</string>
     <string name="picturesDialogTitle">Delete Folder</string>
     <string name="picturesDialogMessage">Are you sure you want to delete selected folder?</string>
+    <string name="whiteBalance">Select white balance level</string>
 </resources>

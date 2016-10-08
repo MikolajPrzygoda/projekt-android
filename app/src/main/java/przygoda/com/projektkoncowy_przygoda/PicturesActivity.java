@@ -17,6 +17,7 @@ import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileFilter;
+import java.util.Objects;
 
 public class PicturesActivity extends AppCompatActivity {
 
@@ -75,8 +76,17 @@ public class PicturesActivity extends AppCompatActivity {
         ivAccept.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if(saveLocation){
+                    EditText tv1 = (EditText) findViewById(R.id.etPicturesSelectedFolder);
+                    Preferences.setSaveLocation(tv1.getText().toString());
+                }
+                else{
+                    Preferences.setSaveLocation("");
+                }
                 Intent intent = new Intent(PicturesActivity.this, CameraActivity.class);
-                intent.putExtra("saveLocation",saveLocation);
+                EditText tv1 = (EditText) findViewById(R.id.etPicturesSelectedFolder);
+                intent.putExtra("path", tv1.getText().toString());
+//                Log.wtf("tag", tv1.getText());
                 startActivity(intent);
             }
         });
@@ -85,12 +95,12 @@ public class PicturesActivity extends AppCompatActivity {
         ivSave.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(saveLocation){
-                    saveLocation = false;
+                if(!saveLocation){
+                    saveLocation = true;
                     ivSave.setImageResource(R.drawable.ic_check_box_black_24dp);
                 }
                 else{
-                    saveLocation = true;
+                    saveLocation = false;
                     ivSave.setImageResource(R.drawable.ic_check_box_outline_blank_black_24dp);
                 }
             }
