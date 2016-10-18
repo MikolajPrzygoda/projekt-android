@@ -39,6 +39,13 @@
             android:layout_weight="1"
             android:scaleType="fitCenter"
             android:src="@drawable/ic_camera_alt_black_24dp1"/>
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/ivSavePictures"
+            android:layout_weight="1"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_save"/>
 
     </LinearLayout>
 

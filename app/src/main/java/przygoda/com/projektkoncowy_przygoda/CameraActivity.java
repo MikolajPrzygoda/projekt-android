@@ -1,25 +1,28 @@
 package przygoda.com.projektkoncowy_przygoda;
 
 import android.animation.ObjectAnimator;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
+import android.graphics.Point;
 import android.hardware.Camera;
-import android.net.LinkAddress;
+import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.Size;
-import android.view.LayoutInflater;
+import android.view.OrientationEventListener;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.NumberPicker;
-import android.widget.TextView;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import java.io.File;
@@ -27,25 +30,34 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Queue;
 
 public class CameraActivity extends AppCompatActivity {
 
     private Camera camera;
-    private int cameraId = -1;
     private CameraPreview cameraPreview;
-    private boolean pictureTaken = false;
-    public byte[] fdata;
     private String saveLocation;
     private Boolean isPanelShowed = false;
-    private LinearLayout bottomPanel;
     private LinearLayout topPanel;
     private FrameLayout frameLayout;
+    private RelativeLayout relativeLayout;
     private Camera.Parameters camParams;
     private List<Camera.Size> resolutionList;
+    private DisplayMetrics screen;
+    private OrientationEventListener orientationEventListener;
+    private boolean isLeft = false;
+    private boolean isRight = false;
+    private boolean isUp = false;
+    private boolean isDown = false;
+    private View[] buttonsToAnimate;
+
+    public LinkedList<ImagePreview> previewList= new LinkedList<>();
+    private boolean takingPhoto;
 
 
     @Override
@@ -53,16 +65,80 @@ public class CameraActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
-//        Bundle bundle = getIntent().getExtras();
-//        TextView textView = (TextView) findViewById(R.id.tvCamera);
-//        textView.setText(bundle.getString("saveLocation"));
-
         topPanel = (LinearLayout) findViewById(R.id.llCameraTopPanel);
-        bottomPanel = (LinearLayout) findViewById(R.id.llCameraBottomPanel);
         frameLayout = (FrameLayout) findViewById(R.id.cameraFrame);
+        relativeLayout = (RelativeLayout) findViewById(R.id.activity_camera);
 
         initCamera();
         initPreview();
+        drawCircle();
+
+        orientationEventListener = new OrientationEventListener(getApplicationContext()) {
+            @Override
+            public void onOrientationChanged(int i) {
+                if( (i > 315 || i < 45) && !isUp ){ //to up
+                    if(isRight) { //right -> up
+                        animButtons(-90, 0);
+                        isRight = false;
+                    }
+                    else if(isDown) { //down -> up
+                        animButtons(180, 0);
+                        isDown = false;
+                    }
+                    else if(isLeft) { //left -> up
+                        animButtons(90, 0);
+                        isLeft = false;
+                    }
+                    isUp = true;
+                }
+                else if( (i > 45 && i < 135) && !isRight ){ //to right
+                    if(isUp) { //up -> right
+                        animButtons(0, -90);
+                        isUp = false;
+                    }
+                    else if(isDown) { //down -> right
+                        animButtons(180, 270);
+                        isDown = false;
+                    }
+                    else if(isLeft) { //left -> right
+                        animButtons(90, -90);
+                        isLeft = false;
+                    }
+                    isRight = true;
+                }
+                else if( (i > 135 && i < 225) && !isDown ){ //to down
+                    if(isUp) { //up -> down
+                        animButtons(0, 180);
+                        isUp = false;
+                    }
+                    else if(isRight) { //right -> down
+                        animButtons(270, 180);
+                        isRight = false;
+                    }
+                    else if(isLeft) { //left -> down
+                        animButtons(90, 180);
+                        isLeft = false;
+                    }
+                    isDown = true;
+                }
+                else if( (i > 225 && i < 315) && !isLeft ){ //to left
+                    if(isUp) { //up -> left
+                        animButtons(0, 90);
+                        isUp = false;
+                    }
+                    else if(isRight) { //right -> left
+                        animButtons(-90, 90);
+                        isRight = false;
+                    }
+                    else if(isDown) { //down -> left
+                        animButtons(180, 90);
+                        isDown = false;
+                    }
+                    isLeft = true;
+                }
+            }
+        };
+
 
         //get saveLocation
         if (!Objects.equals(Preferences.getSaveLocation(), ""))
@@ -71,7 +147,6 @@ public class CameraActivity extends AppCompatActivity {
             saveLocation = getIntent().getExtras().getString("path");
         }
 
-
         //Setup listeners
         frameLayout.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -79,12 +154,12 @@ public class CameraActivity extends AppCompatActivity {
                 if (isPanelShowed) {
                     isPanelShowed = false;
                     ObjectAnimator animTop = ObjectAnimator.ofFloat(topPanel, View.TRANSLATION_Y, 0);
-                    animTop.setDuration(150);
+                    animTop.setDuration(300);
                     animTop.start();
                 } else {
                     isPanelShowed = true;
                     ObjectAnimator animTop = ObjectAnimator.ofFloat(topPanel, View.TRANSLATION_Y, -topPanel.getLayoutParams().height);
-                    animTop.setDuration(150);
+                    animTop.setDuration(300);
                     animTop.start();
                 }
             }
@@ -94,13 +169,9 @@ public class CameraActivity extends AppCompatActivity {
         ivSelectSavePath.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (!pictureTaken) {
-                    finish();
-                    Intent intent = new Intent(CameraActivity.this, PicturesActivity.class);
-                    startActivity(intent);
-                } else {
-                    cancelPhoto();
-                }
+                finish();
+                Intent intent = new Intent(CameraActivity.this, PicturesActivity.class);
+                startActivity(intent);
             }
         });
 
@@ -108,38 +179,57 @@ public class CameraActivity extends AppCompatActivity {
         ivTakePicture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (!pictureTaken) {
+                if(!takingPhoto){
+                    takingPhoto = true;
+                    if(previewList.size() == 3){
+                        ImagePreview ip = previewList.getLast();
+                        ((ViewGroup)ip.getParent()).removeView(ip);
+                        previewList.removeLast();
+                        System.gc();
+                    }
                     camera.takePicture(null, null, camPictureCallback);
-                } else {
-                    SimpleDateFormat dFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-                    String d = dFormat.format(new Date());
-
-                    File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-                    File destDir = new File(picturesDir, "MikolajPrzygoda/" + saveLocation);
-                    File myFoto = new File(destDir, d + ".jpg");
-
-                    FileOutputStream fs = null;
-                    try {
-                        fs = new FileOutputStream(myFoto);
-                    } catch (FileNotFoundException e) {
-                        e.printStackTrace();
-                    }
-                    try {
-                        assert fs != null;
-                        fs.write(fdata);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    try {
-                        fs.close();
-                        cancelPhoto();
-                        Toast.makeText(CameraActivity.this, "Photo saved", Toast.LENGTH_SHORT).show();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                }
+                else{
+                    Toast.makeText(CameraActivity.this, "Wait between taking photos", Toast.LENGTH_SHORT).show();
                 }
             }
         });
+
+        ImageView ivSavePictures = (ImageView) findViewById(R.id.ivSavePictures);
+//      TODO: Save bitmaps from the LIST!
+        ivSavePictures.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+//                SimpleDateFormat dFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+//                String d = dFormat.format(new Date());
+//
+//                File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+//                File destDir = new File(picturesDir, "MikolajPrzygoda/" + saveLocation);
+//                File myFoto = new File(destDir, d + ".jpg");
+//
+//                FileOutputStream fs = null;
+//                try {
+//                    fs = new FileOutputStream(myFoto);
+//                } catch (FileNotFoundException e) {
+//                    e.printStackTrace();
+//                }
+//                try {
+//                    assert fs != null;
+//                    fs.write(buffer);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//                try {
+//                    fs.close();
+//                    cancelPhoto();
+//                    Toast.makeText(CameraActivity.this, "Photo saved", Toast.LENGTH_SHORT).show();
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+            }
+        });
+
+
         ImageView ivWhiteBalance = (ImageView) findViewById(R.id.ivWhiteBalance);
         ivWhiteBalance.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -183,7 +273,7 @@ public class CameraActivity extends AppCompatActivity {
                 int maxExposure = camParams.getMaxExposureCompensation();
 
                 if(minExposure == maxExposure && maxExposure == 0){ //exposure setting not supported
-                    alertDialog("Exposure setting not supported on your device");
+                    Toast.makeText(CameraActivity.this, "Exposure setting not supported on your device", Toast.LENGTH_SHORT).show();
                 }
                 else{
                     String[] exposureLevels = new String [maxExposure - minExposure + 1];
@@ -193,18 +283,26 @@ public class CameraActivity extends AppCompatActivity {
                         index++;
                     }
                     listDialog("Set exposure", exposureLevels, 3);
-
 //                    rangeDialog("Set exposure", minExposure, maxExposure);
                 }
             }
         });
-
         //===============
+        buttonsToAnimate = new View[7];
+        buttonsToAnimate[0] = ivSelectSavePath;
+        buttonsToAnimate[1] = ivTakePicture;
+        buttonsToAnimate[2] = ivSavePictures;
+        buttonsToAnimate[3] = ivWhiteBalance;
+        buttonsToAnimate[4] = ivResolution;
+        buttonsToAnimate[5] = ivcolorFilter;
+        buttonsToAnimate[6] = ivExposure;
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+
+        orientationEventListener.disable();
 
         if (camera != null) {
             camera.stopPreview();
@@ -218,21 +316,25 @@ public class CameraActivity extends AppCompatActivity {
     public void onResume() {
         super.onResume();  // Always call the superclass method first
 
+        if (orientationEventListener.canDetectOrientation())
+            orientationEventListener.enable();
+
         if (camera == null) {
             initCamera();
             initPreview();
+            drawCircle();
         }
     }
 
     private void initCamera() {
         boolean cam = getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA);
 
-        if (!cam) { // uwaga - brak kamery
+        if (!cam) {
             Toast.makeText(CameraActivity.this, "Couldn't find any camera", Toast.LENGTH_SHORT).show();
             finish();
         }
         else {
-            cameraId = getCameraId();
+            int cameraId = getCameraId();
             if (cameraId < 0) {
                 Toast.makeText(CameraActivity.this, "No rear facing camera", Toast.LENGTH_SHORT).show();
                 finish();
@@ -258,11 +360,10 @@ public class CameraActivity extends AppCompatActivity {
 
     private int getCameraId() {
         int cid = 0;
-        int camerasCount = Camera.getNumberOfCameras(); // gdy więcej niż jedna kamera
+        int camerasCount = Camera.getNumberOfCameras();
         for (int i = 0; i < camerasCount; i++) {
             Camera.CameraInfo cameraInfo = new Camera.CameraInfo();
             Camera.getCameraInfo(i, cameraInfo);
-//          if (cameraInfo.facing == CameraInfo.CAMERA_FACING_FRONT)
             if (cameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_BACK) {
                 cid = i;
             }
@@ -278,30 +379,25 @@ public class CameraActivity extends AppCompatActivity {
     private Camera.PictureCallback camPictureCallback = new Camera.PictureCallback() {
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
-            fdata = data;
-            pictureTaken = true;
+            camera.startPreview();
+            takingPhoto = false;
 
-            ImageView ivSelectSavePath = (ImageView) findViewById(R.id.ivSelectSavePath);
-            ImageView ivTakePicture = (ImageView) findViewById(R.id.ivTakePicture);
-            ivSelectSavePath.setImageResource(R.drawable.ic_close_black_24dp);
-            ivTakePicture.setImageResource(R.drawable.ic_check_black_24dp1);
+            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+            ImagePreview preview = new ImagePreview(getApplicationContext(), bitmap, screen);
+            relativeLayout.addView(preview);
+
+            //reposition previews after adding new ImageViews
+            previewList.addFirst(preview);
+            positionPreviews(previewList);
         }
     };
 
     private void cancelPhoto() {
         camera.startPreview();
-        pictureTaken = false;
-
-        ImageView ivSelectSavePath = (ImageView) findViewById(R.id.ivSelectSavePath);
-        ImageView ivTakePicture = (ImageView) findViewById(R.id.ivTakePicture);
-        ivSelectSavePath.setImageResource(R.drawable.ic_menu_black_24dp);
-        ivTakePicture.setImageResource(R.drawable.ic_camera_alt_black_24dp1);
     }
 
     private void listDialog(String title, final String[] values, final int mode) {
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
-        Log.e("tag", "" + values.length);
         builder
                 .setTitle(title)
                 .setItems(values, new DialogInterface.OnClickListener() {
@@ -340,53 +436,104 @@ public class CameraActivity extends AppCompatActivity {
                 .setMessage(message)
                 .setNeutralButton("Ok", new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(DialogInterface dialog,int id) {
+                    public void onClick(DialogInterface dialog, int id) {
                         dialog.cancel();
                     }
                 })
                 .show();
     }
 
-    private void rangeDialog(String title, final int min, int max){
-        LayoutInflater li = LayoutInflater.from(this);
-        View dialogView = li.inflate(R.layout.range_dialog_layout, null);
+//    private void rangeDialog(String title, final int min, int max){
+//        LayoutInflater li = LayoutInflater.from(this);
+//        View dialogView = li.inflate(R.layout.range_dialog_layout, null);
+//
+//        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+//        alertDialogBuilder.setView(dialogView);
+//
+//        final NumberPicker exposureRangeInput = (NumberPicker) dialogView.findViewById(R.id.npExposureRange);
+//        //block soft keyboard
+//        exposureRangeInput.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
+//        exposureRangeInput.setMinValue(0);
+//        exposureRangeInput.setMaxValue(max - min);
+//        exposureRangeInput.setWrapSelectorWheel(false);
+//        exposureRangeInput.setFormatter(new NumberPicker.Formatter() {
+//            @Override
+//            public String format(int index) {
+//                return Integer.toString(index + min);
+//            }
+//        });
+//        Log.e("LOG", "min: "+0+", max: "+(max-min)+", set: "+(max+min));
+//        exposureRangeInput.setValue(max + min);
+//
+//        alertDialogBuilder
+//            .setTitle(title)
+//            .setPositiveButton("Set",
+//                new DialogInterface.OnClickListener() {
+//                    public void onClick(DialogInterface dialog,int id) {
+//                        Log.e("TAG", ""+(exposureRangeInput.getValue()+min));
+//                    }
+//                })
+//            .setNegativeButton("Cancel",
+//                new DialogInterface.OnClickListener() {
+//                    public void onClick(DialogInterface dialog,int id) {
+//                        dialog.cancel();
+//                    }
+//                });
+//
+//        AlertDialog alertDialog = alertDialogBuilder.create();
+//        alertDialog.show();
+//
+//    }
 
-        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-        alertDialogBuilder.setView(dialogView);
-
-        final NumberPicker exposureRangeInput = (NumberPicker) dialogView.findViewById(R.id.npExposureRange);
-        //block soft keyboard
-        exposureRangeInput.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
-        exposureRangeInput.setMinValue(0);
-        exposureRangeInput.setMaxValue(max - min);
-        exposureRangeInput.setWrapSelectorWheel(false);
-        exposureRangeInput.setFormatter(new NumberPicker.Formatter() {
-            @Override
-            public String format(int index) {
-                return Integer.toString(index + min);
-            }
-        });
-        Log.e("LOG", "min: "+0+", max: "+(max-min)+", set: "+(max+min));
-        exposureRangeInput.setValue(max + min);
-
-        alertDialogBuilder
-            .setTitle(title)
-            .setPositiveButton("Set",
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog,int id) {
-                        Log.e("TAG", ""+(exposureRangeInput.getValue()+min));
-                    }
-                })
-            .setNegativeButton("Cancel",
-                new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog,int id) {
-                        dialog.cancel();
-                    }
-                });
-
-        AlertDialog alertDialog = alertDialogBuilder.create();
-        alertDialog.show();
-
+    private void animButtons(int startAngle, int targetAngle) {
+        // animate camera ui buttons
+        for (View view: buttonsToAnimate){
+            ObjectAnimator
+                    .ofFloat(view, View.ROTATION, startAngle, targetAngle)
+                    .setDuration(300)
+                    .start();
+        }
+        // animate all existing previews
+        for (int i = 0; i < previewList.size(); i++){
+            View view = previewList.get(i);
+            ObjectAnimator
+                    .ofFloat(view, View.ROTATION, startAngle, targetAngle)
+                    .setDuration(300)
+                    .start();
+        }
     }
 
+    private void drawCircle(){
+        screen = getResources().getDisplayMetrics();
+        Circle circle = new Circle(getApplicationContext(), screen);
+        frameLayout.addView(circle);
+    }
+
+    private void positionPreviews(LinkedList list){
+        Point[] positions = calcPositions((double)list.size());
+        for(int i = 0; i < list.size(); i++){
+            ImagePreview ip = (ImagePreview) list.get(i);
+            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(ip.getLayoutParams());
+            params.setMargins(positions[i].x, positions[i].y, 0, 0);
+            ip.setLayoutParams(params);
+        }
+    }
+
+    private Point[] calcPositions(double n){
+        Point s = new Point(
+                Utils.getScreenCenter(this).x - Utils.getPreviewSize(this)/2,
+                Utils.getScreenCenter(this).y - Utils.getPreviewSize(this)/2
+        );
+        int r = Utils.getCameraCircleRadius(this);
+
+        Point[] retArr = new Point[(int)n];
+        for (double i = 0; i < n; i++) {
+            retArr[(int)i] = new Point(
+                    (int) (r*Math.cos(Math.toRadians(360 * ( (i+1)/ n) )) + s.x),
+                    (int) (r*Math.sin(Math.toRadians(360 * ( (i+1)/ n) )) + s.y)
+            );
+            Log.e("tag", retArr[(int)i].x+"-"+retArr[(int)i].y);
+        }
+        return retArr;
+    }
 }
