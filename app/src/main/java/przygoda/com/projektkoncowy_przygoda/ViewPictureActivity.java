@@ -16,8 +16,9 @@ public class ViewPictureActivity extends AppCompatActivity {
         Bundle b = getIntent().getExtras();
         String picturePath = b.getString("picturePath");
 
-        ImageView iv = (ImageView) findViewById(R.id.ivPicturePreview);
         Bitmap bmp = AlbumContentActivity.imageDecode(picturePath);
+
+        ImageView iv = (ImageView) findViewById(R.id.ivPicturePreview);
         iv.setImageBitmap(bmp);
     }
 }

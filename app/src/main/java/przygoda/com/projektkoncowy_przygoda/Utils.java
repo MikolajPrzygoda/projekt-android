@@ -9,13 +9,22 @@ import android.telecom.DisconnectCause;
 import android.util.DisplayMetrics;
 import android.view.Display;
 
+import java.io.File;
+
 /**
  * Created by miki on 08.10.2016.
  */
 
 public class Utils {
 
-    static Bitmap resize(Bitmap map, Point size){
+    static public void deleteRecursive(File fileOrDirectory) {
+        if (fileOrDirectory.isDirectory())
+            for (File child : fileOrDirectory.listFiles())
+                deleteRecursive(child);
+        fileOrDirectory.delete();
+    }
+
+    static Bitmap resizeBitmap(Bitmap map, Point size){
         return Bitmap.createScaledBitmap(map, size.x, size.y, false);
     }
 
@@ -32,7 +41,7 @@ public class Utils {
         return new Point(m.widthPixels/2, m.heightPixels/2);
     }
 
-    static public Bitmap RotateBitmap(Bitmap source, float angle)
+    static public Bitmap rotateBitmap(Bitmap source, float angle)
     {
         Matrix matrix = new Matrix();
         matrix.postRotate(angle);

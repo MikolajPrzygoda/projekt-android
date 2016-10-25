@@ -123,4 +123,16 @@ public class PicturesActivity extends AppCompatActivity {
             fileNames[i] = files[i].getName();
         }
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if(!Preferences.getSaveLocation().equals("")){
+            finish();
+        }
+
+        refreshFiles();
+        refreshGridView();
+    }
 }

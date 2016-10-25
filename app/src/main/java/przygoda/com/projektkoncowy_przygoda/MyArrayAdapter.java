@@ -67,7 +67,7 @@ public class MyArrayAdapter extends ArrayAdapter{
                 .setPositiveButton("Yes",  new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int id) {
-                        deleteRecursive(((PicturesActivity)_context).files[position]);
+                        Utils.deleteRecursive(((PicturesActivity)_context).files[position]);
                         ((PicturesActivity)_context).refreshFiles();
                         ((PicturesActivity)_context).refreshGridView();
                     }
@@ -81,10 +81,5 @@ public class MyArrayAdapter extends ArrayAdapter{
                 .show();
     }
 
-    private void deleteRecursive(File fileOrDirectory) {
-        if (fileOrDirectory.isDirectory())
-            for (File child : fileOrDirectory.listFiles())
-                deleteRecursive(child);
-        fileOrDirectory.delete();
-    }
+
 }

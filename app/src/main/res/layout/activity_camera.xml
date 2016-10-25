@@ -12,13 +12,25 @@
         android:layout_height="match_parent"
         />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/tvCameraStatus"
+        android:visibility="invisible"
+        android:background="@color/colorPrimaryTransparent"
+        android:text="@string/placeholder"
+        android:gravity="center"
+        android:layout_below="@+id/llCameraTopPanel"
+        android:layout_marginTop="30dp"
+        android:textSize="30sp" />
+
     <LinearLayout
         android:id="@+id/llCameraBottomPanel"
         android:layout_width="match_parent"
         android:padding="5dp"
-        android:layout_height="60dp"
+        android:layout_height="65dp"
         android:orientation="horizontal"
-        android:background="#992222ff"
+        android:background="@color/colorPrimaryTransparent"
         android:layout_alignParentStart="false"
         android:layout_alignParentEnd="false"
         android:layout_alignParentBottom="true"
@@ -53,7 +65,7 @@
         android:id="@+id/llCameraTopPanel"
         android:orientation="horizontal"
         android:layout_width="match_parent"
-        android:background="#992222ff"
+        android:background="@color/colorPrimaryTransparent"
         android:layout_height="60dp"
         android:padding="5dp"
         android:layout_alignParentBottom="false"
@@ -89,5 +101,32 @@
             />
 
     </LinearLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/rlPicturePreview"
+        android:visibility="invisible"
+        android:background="@color/colorPrimary"
+        android:layout_margin="10dp">
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="invisible"
+            android:scaleType="centerInside"
+            android:id="@+id/ivPicturePreview"/>
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:id="@+id/ivClosePreview"
+            android:visibility="invisible"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentRight="true"
+            android:layout_margin="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_close_black_24dp"/>
+
+    </RelativeLayout>
 
 </RelativeLayout>

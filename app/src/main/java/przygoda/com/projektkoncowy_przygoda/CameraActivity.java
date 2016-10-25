@@ -1,21 +1,18 @@
 package przygoda.com.projektkoncowy_przygoda;
 
 import android.animation.ObjectAnimator;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.Point;
 import android.hardware.Camera;
 import android.os.Bundle;
-import android.os.Environment;
+import android.os.Handler;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,42 +20,36 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
-import java.util.Queue;
 
 public class CameraActivity extends AppCompatActivity {
 
     private Camera camera;
     private CameraPreview cameraPreview;
-    private String saveLocation;
     private Boolean isPanelShowed = false;
     private LinearLayout topPanel;
     private FrameLayout frameLayout;
-    private RelativeLayout relativeLayout;
+    public RelativeLayout relativeLayout;
     private Camera.Parameters camParams;
     private List<Camera.Size> resolutionList;
-    private DisplayMetrics screen;
     private OrientationEventListener orientationEventListener;
     private boolean isLeft = false;
     private boolean isRight = false;
     private boolean isUp = false;
     private boolean isDown = false;
+    private boolean isOccupied;
     private View[] buttonsToAnimate;
+    private float startx = 0;
 
-    public LinkedList<ImagePreview> previewList= new LinkedList<>();
-    private boolean takingPhoto;
+    public LinkedList<ImagePreview> previewList = new LinkedList<>();
+    public Handler handler;
+    public ImagePreview lastLongClickedView = null;
 
+    private final int MAX_NUMBER_OF_PREVIEWS = 8;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,6 +63,10 @@ public class CameraActivity extends AppCompatActivity {
         initCamera();
         initPreview();
         drawCircle();
+
+        //set saveLocation if not set already
+        if ( Preferences.getSaveLocation().equals("") )
+            Preferences.setTempSaveLocation( getIntent().getExtras().getString("path") );
 
         orientationEventListener = new OrientationEventListener(getApplicationContext()) {
             @Override
@@ -139,14 +134,6 @@ public class CameraActivity extends AppCompatActivity {
             }
         };
 
-
-        //get saveLocation
-        if (!Objects.equals(Preferences.getSaveLocation(), ""))
-            saveLocation = Preferences.getSaveLocation();
-        else {
-            saveLocation = getIntent().getExtras().getString("path");
-        }
-
         //Setup listeners
         frameLayout.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -169,6 +156,7 @@ public class CameraActivity extends AppCompatActivity {
         ivSelectSavePath.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Preferences.setSaveLocation("");
                 finish();
                 Intent intent = new Intent(CameraActivity.this, PicturesActivity.class);
                 startActivity(intent);
@@ -179,53 +167,27 @@ public class CameraActivity extends AppCompatActivity {
         ivTakePicture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(!takingPhoto){
-                    takingPhoto = true;
-                    if(previewList.size() == 3){
-                        ImagePreview ip = previewList.getLast();
-                        ((ViewGroup)ip.getParent()).removeView(ip);
-                        previewList.removeLast();
-                        System.gc();
-                    }
+                if(!isOccupied){
+                    showStatus("Taking photo...");
                     camera.takePicture(null, null, camPictureCallback);
                 }
                 else{
-                    Toast.makeText(CameraActivity.this, "Wait between taking photos", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CameraActivity.this, "App is currently busy", Toast.LENGTH_SHORT).show();
                 }
             }
         });
 
         ImageView ivSavePictures = (ImageView) findViewById(R.id.ivSavePictures);
-//      TODO: Save bitmaps from the LIST!
         ivSavePictures.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                SimpleDateFormat dFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-//                String d = dFormat.format(new Date());
-//
-//                File picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
-//                File destDir = new File(picturesDir, "MikolajPrzygoda/" + saveLocation);
-//                File myFoto = new File(destDir, d + ".jpg");
-//
-//                FileOutputStream fs = null;
-//                try {
-//                    fs = new FileOutputStream(myFoto);
-//                } catch (FileNotFoundException e) {
-//                    e.printStackTrace();
-//                }
-//                try {
-//                    assert fs != null;
-//                    fs.write(buffer);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//                try {
-//                    fs.close();
-//                    cancelPhoto();
-//                    Toast.makeText(CameraActivity.this, "Photo saved", Toast.LENGTH_SHORT).show();
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
+                // update UI
+                showStatus("Saving photos...");
+
+                // create new Thread
+                handler = new MyHandler(CameraActivity.this, Tasks.SAVEPHOTOS);
+                Thread thread = new MyThread(CameraActivity.this, Tasks.SAVEPHOTOS, handler);
+                thread.start();
             }
         });
 
@@ -283,8 +245,14 @@ public class CameraActivity extends AppCompatActivity {
                         index++;
                     }
                     listDialog("Set exposure", exposureLevels, 3);
-//                    rangeDialog("Set exposure", minExposure, maxExposure);
                 }
+            }
+        });
+
+        findViewById(R.id.ivClosePreview).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hidePreview();
             }
         });
         //===============
@@ -380,21 +348,76 @@ public class CameraActivity extends AppCompatActivity {
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
             camera.startPreview();
-            takingPhoto = false;
+            hideStatus();
 
-            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-            ImagePreview preview = new ImagePreview(getApplicationContext(), bitmap, screen);
+            ImagePreview preview = new ImagePreview(getApplicationContext(), data);
             relativeLayout.addView(preview);
 
-            //reposition previews after adding new ImageViews
+            //setup longpress listener for every new ImagePreview object
+            preview.setOnLongClickListener(new View.OnLongClickListener() {
+                @Override
+                public boolean onLongClick(View v) {
+                    lastLongClickedView = (ImagePreview) v;
+
+                    String[] options = {
+                            "show preview",
+                            "save",
+                            "save all",
+                            "delete",
+                            "delete all"
+                    };
+                    listDialog("What do you want to do?", options, 4);
+
+                    return true;
+                }
+            });
+            preview.setOnTouchListener(new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent event) {
+                    switch (event.getAction()){
+                        case MotionEvent.ACTION_DOWN:
+                            startx = event.getRawX();
+                            break;
+                        case MotionEvent.ACTION_MOVE:
+                            if(event.getRawX()-startx > 200){
+                                int id = ((ImagePreview) v).ID;
+                                for (int i = 0; i < previewList.size(); i++){
+                                    ImagePreview view = previewList.get(i);
+                                    if(view.ID == id){
+                                        ((ViewGroup)view.getParent()).removeView(view);
+                                        previewList.remove(i);
+                                        positionPreviews();
+                                        break;
+                                    }
+                                }
+                            }
+                            else{
+                                RelativeLayout.LayoutParams tempMargins = (RelativeLayout.LayoutParams) v.getLayoutParams();
+                                tempMargins.setMargins( (int) event.getRawX() - Utils.getPreviewSize(CameraActivity.this)/2, tempMargins.topMargin, 0, 0);
+                                v.setLayoutParams(tempMargins);
+                            }
+                            break;
+                        case MotionEvent.ACTION_UP:
+                            positionPreviews();
+                            break;
+                    }
+                    return false;
+                }
+            });
+
+            //limits max number of simultaneous previews
+            if(previewList.size() == MAX_NUMBER_OF_PREVIEWS){
+                ImagePreview ip = previewList.getLast();
+                ((ViewGroup)ip.getParent()).removeView(ip);
+                previewList.removeLast();
+                System.gc();
+            }
+
+            //reposition previews after adding new ImagePreview
             previewList.addFirst(preview);
-            positionPreviews(previewList);
+            positionPreviews();
         }
     };
-
-    private void cancelPhoto() {
-        camera.startPreview();
-    }
 
     private void listDialog(String title, final String[] values, final int mode) {
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -402,7 +425,7 @@ public class CameraActivity extends AppCompatActivity {
                 .setTitle(title)
                 .setItems(values, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int i) {
-                        switch (mode){
+                        switch (mode) {
                             case 0:
                                 camParams.setWhiteBalance(values[i]);
                                 break;
@@ -414,6 +437,42 @@ public class CameraActivity extends AppCompatActivity {
                                 break;
                             case 3:
                                 camParams.setExposureCompensation(Integer.parseInt(values[i]));
+                                break;
+
+                            //Longpress listener Dialog
+                            case 4:
+                                Thread thread;
+                                int count;
+                                switch (i) {
+                                    case 0:
+                                        showStatus("Loading preview...");
+                                        showPreview();
+                                        break;
+                                    case 1:
+                                        showStatus("Saving photo...");
+                                        handler = new MyHandler(CameraActivity.this, Tasks.SAVEPHOTO);
+                                        thread = new MyThread(CameraActivity.this, Tasks.SAVEPHOTO, handler);
+                                        thread.start();
+                                        break;
+
+                                    case 2:
+                                        showStatus("Saving photos...");
+                                        handler = new MyHandler(CameraActivity.this, Tasks.SAVEPHOTOS);
+                                        thread = new MyThread(CameraActivity.this, Tasks.SAVEPHOTOS, handler);
+                                        thread.start();
+                                        break;
+                                    case 3:
+                                        discardLastClickedPreview();
+                                        break;
+                                    case 4:
+                                        count = previewList.size();
+                                        for(int j = 0; j < count; j++){
+                                            ImagePreview view = previewList.getFirst();
+                                            ((ViewGroup) view.getParent()).removeView(view);
+                                            previewList.removeFirst();
+                                        }
+                                        break;
+                                }
                                 break;
                         }
                         camera.setParameters(camParams);
@@ -443,48 +502,6 @@ public class CameraActivity extends AppCompatActivity {
                 .show();
     }
 
-//    private void rangeDialog(String title, final int min, int max){
-//        LayoutInflater li = LayoutInflater.from(this);
-//        View dialogView = li.inflate(R.layout.range_dialog_layout, null);
-//
-//        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-//        alertDialogBuilder.setView(dialogView);
-//
-//        final NumberPicker exposureRangeInput = (NumberPicker) dialogView.findViewById(R.id.npExposureRange);
-//        //block soft keyboard
-//        exposureRangeInput.setDescendantFocusability(NumberPicker.FOCUS_BLOCK_DESCENDANTS);
-//        exposureRangeInput.setMinValue(0);
-//        exposureRangeInput.setMaxValue(max - min);
-//        exposureRangeInput.setWrapSelectorWheel(false);
-//        exposureRangeInput.setFormatter(new NumberPicker.Formatter() {
-//            @Override
-//            public String format(int index) {
-//                return Integer.toString(index + min);
-//            }
-//        });
-//        Log.e("LOG", "min: "+0+", max: "+(max-min)+", set: "+(max+min));
-//        exposureRangeInput.setValue(max + min);
-//
-//        alertDialogBuilder
-//            .setTitle(title)
-//            .setPositiveButton("Set",
-//                new DialogInterface.OnClickListener() {
-//                    public void onClick(DialogInterface dialog,int id) {
-//                        Log.e("TAG", ""+(exposureRangeInput.getValue()+min));
-//                    }
-//                })
-//            .setNegativeButton("Cancel",
-//                new DialogInterface.OnClickListener() {
-//                    public void onClick(DialogInterface dialog,int id) {
-//                        dialog.cancel();
-//                    }
-//                });
-//
-//        AlertDialog alertDialog = alertDialogBuilder.create();
-//        alertDialog.show();
-//
-//    }
-
     private void animButtons(int startAngle, int targetAngle) {
         // animate camera ui buttons
         for (View view: buttonsToAnimate){
@@ -504,12 +521,12 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     private void drawCircle(){
-        screen = getResources().getDisplayMetrics();
-        Circle circle = new Circle(getApplicationContext(), screen);
+        Circle circle = new Circle(getApplicationContext());
         frameLayout.addView(circle);
     }
 
-    private void positionPreviews(LinkedList list){
+    public void positionPreviews(){
+        LinkedList list = previewList;
         Point[] positions = calcPositions((double)list.size());
         for(int i = 0; i < list.size(); i++){
             ImagePreview ip = (ImagePreview) list.get(i);
@@ -529,11 +546,53 @@ public class CameraActivity extends AppCompatActivity {
         Point[] retArr = new Point[(int)n];
         for (double i = 0; i < n; i++) {
             retArr[(int)i] = new Point(
-                    (int) (r*Math.cos(Math.toRadians(360 * ( (i+1)/ n) )) + s.x),
-                    (int) (r*Math.sin(Math.toRadians(360 * ( (i+1)/ n) )) + s.y)
+                    (int) (r*Math.cos(Math.toRadians(180 + 360 * ( (i+1)/ n) )) + s.x),
+                    (int) (r*Math.sin(Math.toRadians(180 + 360 * ( (i+1)/ n) )) + s.y)
             );
-            Log.e("tag", retArr[(int)i].x+"-"+retArr[(int)i].y);
         }
         return retArr;
+    }
+
+    public void showStatus(String message){
+        isOccupied = true;
+        TextView tvStatus = (TextView) findViewById(R.id.tvCameraStatus);
+        tvStatus.setText(message);
+        tvStatus.setVisibility(View.VISIBLE);
+    }
+    public void hideStatus(){
+        isOccupied = false;
+        TextView tvStatus = (TextView) findViewById(R.id.tvCameraStatus);
+        tvStatus.setVisibility(View.INVISIBLE);
+    }
+
+    private void showPreview(){
+        try{
+            // create new Thread
+            handler = new MyHandler(CameraActivity.this, Tasks.SHOWPREVIEW);
+            Thread thread = new MyThread(CameraActivity.this, Tasks.SHOWPREVIEW, handler);
+            thread.start();
+        }
+        catch(ClassCastException ex){
+//            ex.printStackTrace();
+            Log.e("showPreviewError", "View parameter isn't a instance of ImagePreview class");
+        }
+    }
+    public void hidePreview(){
+        relativeLayout.findViewById(R.id.rlPicturePreview).setVisibility(View.INVISIBLE);
+        relativeLayout.findViewById(R.id.ivPicturePreview).setVisibility(View.INVISIBLE);
+        relativeLayout.findViewById(R.id.ivClosePreview).setVisibility(View.INVISIBLE);
+    }
+
+    private void discardLastClickedPreview(){
+        int count = previewList.size();
+        for(int j = 0; j < count; j++){
+            ImagePreview view = previewList.get(j);
+            if(view.ID == lastLongClickedView.ID){
+                ((ViewGroup) view.getParent()).removeView(view);
+                previewList.remove(j);
+                positionPreviews();
+                break;
+            }
+        }
     }
 }

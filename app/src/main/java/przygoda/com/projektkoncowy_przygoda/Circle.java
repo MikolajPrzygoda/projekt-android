@@ -14,15 +14,13 @@ import android.view.View;
  */
 public class Circle extends View {
 
-    private DisplayMetrics screenSize;
     private Context _context;
     private Paint paint;
 
-    public Circle(Context context, DisplayMetrics screen) {
+    public Circle(Context context) {
         super(context);
         _context = context;
 
-        screenSize = screen;
         paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         paint.setAntiAlias(true);
         paint.setStyle(Paint.Style.STROKE);
@@ -34,6 +32,7 @@ public class Circle extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
-        canvas.drawCircle(screenSize.widthPixels/2, screenSize.heightPixels/2, Utils.getCameraCircleRadius(_context), paint);
+        Point center = Utils.getScreenCenter(_context);
+        canvas.drawCircle(center.x, center.y, Utils.getCameraCircleRadius(_context), paint);
     }
 }
